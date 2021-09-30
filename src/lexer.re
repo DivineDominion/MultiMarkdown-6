@@ -130,7 +130,7 @@ int scan(Scanner * s, const char * stop) {
 		"[["							{ return BRACKET_DOUBLE_LEFT; }
 		"]]"							{ return BRACKET_DOUBLE_RIGHT; }
 
-		"!["							{ return BRACKET_IMAGE_LEFT; }
+		"![" / [^\[]						{ return BRACKET_IMAGE_LEFT; }
 		"[>"							{ return BRACKET_ABBREVIATION_LEFT; }
 		"[#"							{ return BRACKET_CITATION_LEFT; }
 		"[^"							{ return BRACKET_FOOTNOTE_LEFT; }
