@@ -79,12 +79,12 @@ set(public_headers
 	src/libMultiMarkdown.h
 	src/d_string.h
 	src/token.h
+	src/char.h
 )
 
 set(private_headers
 	src/aho-corasick.h
 	src/beamer.h
-	src/char.h
 	src/critic_markup.h
 	src/epub.h
 	src/file.h

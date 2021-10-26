@@ -2,5 +2,6 @@ framework module libMultiMarkdown {
     header "libMultiMarkdown.h"
     header "d_string.h"
     header "token.h"
+    header "char.h"
     export *
 }
