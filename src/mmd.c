@@ -1167,6 +1167,7 @@ token * mmd_tokenize_string(mmd_engine * e, size_t start, size_t len, bool stop_
 					t = token_new(BRACKET_LEFT, (size_t)(s.start - e->dstr->str + 1), 1);
 					token_append_child(line, t);
 				}
+
 				break;
 
 			case BRACKET_DOUBLE_RIGHT:
@@ -1179,6 +1180,7 @@ token * mmd_tokenize_string(mmd_engine * e, size_t start, size_t len, bool stop_
 					t = token_new(BRACKET_RIGHT, (size_t)(s.start - e->dstr->str + 1), 1);
 					token_append_child(line, t);
 				}
+
 				break;
 
 			default:
@@ -1841,8 +1843,11 @@ void recursive_parse_indent(mmd_engine * e, token * block) {
 	// Strip tokens?
 	switch (block->type) {
 		case BLOCK_DEFINITION:
-			// Strip leading ':' from definition
-			token_remove_first_child(block->child);
+			// Flag leading ':' as markup
+			block->child->child->type = MARKER_DEFLIST_COLON;
+
+			// Strip whitespace between colon and remainder of line
+			strip_leading_whitespace(block->child->child->next, e->dstr->str);
 			break;
 	}
 
@@ -2165,13 +2170,22 @@ void strip_line_tokens_from_block(mmd_engine * e, token * block) {
 		switch (l->type) {
 			case LINE_SETEXT_1:
 			case LINE_SETEXT_2:
-				if ((block->type == BLOCK_SETEXT_1) ||
-						(block->type == BLOCK_SETEXT_2)) {
-					temp = l->next;
-					tokens_prune(l, l);
-					l = temp;
-					break;
+				temp = token_new_parent(l->child, MARKER_SETEXT_1 + l->type - LINE_SETEXT_1);
+
+				// Add contents of line to parent block
+				token_append_child(block, temp);
+
+				// Disconnect line from it's contents
+				l->child = NULL;
+
+				// Need to remember first line we strip
+				if (children == NULL) {
+					children = l;
 				}
+
+				// Advance to next line
+				l = l->next;
+				break;
 
 			case LINE_DEFINITION:
 				if (block->type == BLOCK_DEFINITION) {
@@ -2181,16 +2195,7 @@ void strip_line_tokens_from_block(mmd_engine * e, token * block) {
 
 						temp = l->child->next;
 
-						if (temp->len) {
-							strip_leading_whitespace(temp, e->dstr->str);
-
-							if (temp->len == 0) {
-								token_pop_link_from_chain(temp);
-								token_free(temp);
-							}
-						} else {
-							strip_leading_whitespace(temp, e->dstr->str);
-						}
+						strip_leading_whitespace(temp, e->dstr->str);
 					}
 				}
 
@@ -2267,10 +2272,9 @@ handle_line:
 				strip_line_tokens_from_block(e, l);
 
 				// Move children to parent
-				// Add ':' back
-				if (l->child && l->child->start > 0 && e->dstr->str[l->child->start - 1] == ':') {
-					temp = token_new(COLON, l->child->start - 1, 1);
-					token_append_child(block, temp);
+				// Add ':' back?
+				if (l->child && l->child->type == MARKER_DEFLIST_COLON) {
+					l->child->type = COLON;
 				}
 
 				token_append_child(block, l->child);

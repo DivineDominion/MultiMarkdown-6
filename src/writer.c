@@ -482,7 +482,22 @@ char * label_from_header(const char * source, token * t, scratch_pad * scratch) 
 
 			scratch->label_counter++;
 		} else {
-			result = label_from_token(source, t);
+			temp_token = token_new(t->type, t->start, t->len);
+
+			if (t->child && t->child->tail) {
+				switch (t->child->tail->type) {
+					case MARKER_SETEXT_1:
+					case MARKER_SETEXT_2:
+						temp_token->len = t->child->tail->start - t->start;
+						break;
+
+					default:
+						break;
+				}
+			}
+
+			result = label_from_token(source, temp_token);
+			token_free(temp_token);
 		}
 	}
 
@@ -1544,10 +1559,17 @@ token * manual_label_from_header(token * h, const char * source) {
 			case MARKER_H4:
 			case MARKER_H5:
 			case MARKER_H6:
+			case MARKER_SETEXT_1:
+			case MARKER_SETEXT_2:
 				walker = walker->prev;
 				break;
 
 			case TEXT_PLAIN:
+				if (walker->len == 0) {
+					walker = walker->prev;
+					break;
+				}
+
 				if (walker->len == 1) {
 					if (source[walker->start] == ' ') {
 						walker = walker->prev;
@@ -2550,7 +2572,6 @@ void strip_leading_whitespace(token * chain, const char * source) {
 				chain->type = TEXT_EMPTY;
 
 			case TEXT_EMPTY:
-				chain = chain->next;
 				break;
 
 			case TEXT_PLAIN:
@@ -2666,6 +2687,67 @@ short raw_level_for_header(token * header) {
 	}
 
 	return 0;
+}
+
+
+void header_clean_trailing_whitespace(token * header, const char * source) {
+	token * walker = header->tail;
+	bool done = false;
+
+	while (!done && walker) {
+		switch (walker->type) {
+			case TEXT_PLAIN:
+				token_trim_trailing_whitespace(walker, source);
+
+				if (walker->len) {
+					done = true;
+				}
+
+				break;
+
+			case NON_INDENT_SPACE:
+			case INDENT_SPACE:
+			case INDENT_TAB:
+				walker->type = TEXT_PLAIN;
+
+			case TEXT_NL:
+			case TEXT_NL_SP:
+			case TEXT_LINEBREAK:
+			case TEXT_LINEBREAK_SP:
+				token_trim_trailing_whitespace(walker, source);
+				break;
+
+			case MARKER_H1:
+			case MARKER_H2:
+			case MARKER_H3:
+			case MARKER_H4:
+			case MARKER_H5:
+			case MARKER_H6:
+			case MANUAL_LABEL:
+				break;
+
+			case MARKER_SETEXT_1:
+			case MARKER_SETEXT_2:
+				if (walker->prev) {
+					switch (walker->prev->type) {
+						case TEXT_NL:
+						case TEXT_NL_SP:
+						case TEXT_LINEBREAK:
+						case TEXT_LINEBREAK_SP:
+							walker->prev->type = NON_INDENT_SPACE;
+							break;
+					}
+				}
+
+				break;
+
+			default:
+				done = true;
+				break;
+		}
+
+		walker = walker->prev;
+	}
 }
 
 

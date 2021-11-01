@@ -481,6 +481,7 @@ void mmd_export_toc_entry_html(DString * out, const char * source, scratch_pad *
 				temp_char = label_from_header(source, entry, scratch);
 				printf("<li><a href=\"#%s\">", temp_char);
 				mmd_export_token_tree_html(out, source, entry->child, scratch);
+				trim_trailing_whitespace_d_string(out);
 				print_const("</a>");
 
 				if (*counter < scratch->header_stack->size - 1) {
@@ -491,6 +492,7 @@ void mmd_export_toc_entry_html(DString * out, const char * source, scratch_pad *
 						// This entry has children
 						(*counter)++;
 						mmd_export_toc_entry_html(out, source, scratch, counter, entry_level + 1, min, max);
+						trim_trailing_whitespace_d_string(out);
 					}
 				}
 
@@ -644,6 +646,7 @@ void mmd_export_token_html(DString * out, const char * source, token * t, scratc
 					// Raw source
 					if (raw_filter_text_matches(temp_char, FORMAT_HTML)) {
 						switch (t->child->tail->type) {
+							case CODE_FENCE_LINE:
 							case LINE_FENCE_BACKTICK_3:
 							case LINE_FENCE_BACKTICK_4:
 							case LINE_FENCE_BACKTICK_5:
@@ -711,8 +714,8 @@ void mmd_export_token_html(DString * out, const char * source, token * t, scratc
 				free(temp_char);
 			}
 
+			header_clean_trailing_whitespace(t->child, source);
 			mmd_export_token_tree_html(out, source, t->child, scratch);
-			trim_trailing_whitespace_d_string(out);
 
 			printf("</h%1d>", temp_short + scratch->base_header_level - 1);
 			scratch->padded = 0;
@@ -879,6 +882,7 @@ void mmd_export_token_html(DString * out, const char * source, token * t, scratc
 				free(temp_char);
 			}
 
+			header_clean_trailing_whitespace(t->child, source);
 			mmd_export_token_tree_html(out, source, t->child, scratch);
 			printf("</h%1d>", temp_short + scratch->base_header_level - 1);
 			scratch->padded = 0;
@@ -896,6 +900,7 @@ void mmd_export_token_html(DString * out, const char * source, token * t, scratc
 				free(temp_char);
 			}
 
+			header_clean_trailing_whitespace(t->child, source);
 			mmd_export_token_tree_html(out, source, t->child, scratch);
 			printf("</h%1d>", temp_short + scratch->base_header_level - 1);
 			scratch->padded = 0;
@@ -1237,6 +1242,8 @@ void mmd_export_token_html(DString * out, const char * source, token * t, scratc
 		case MARKER_H4:
 		case MARKER_H5:
 		case MARKER_H6:
+		case MARKER_SETEXT_1:
+		case MARKER_SETEXT_2:
 			break;
 
 		case MARKER_LIST_BULLET:
