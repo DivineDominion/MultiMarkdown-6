@@ -646,6 +646,15 @@ void mmd_assign_line_type(mmd_engine * e, token * line) {
 
 		case DASH_N:
 		case DASH_M:
+
+			// This could be a table separator instead of a list
+			if (!(e->extensions & EXT_COMPATIBILITY)) {
+				if (scan_table_separator(&source[first_child->start])) {
+					line->type = LINE_TABLE_SEPARATOR;
+					break;
+				}
+			}
+
 			if (scan_setext(&source[first_child->start])) {
 				line->type = LINE_SETEXT_2;
 				break;
@@ -909,6 +918,7 @@ void deindent_line(token  * line) {
 			if (line->child) {
 				line->child->prev = NULL;
 				line->child->tail = t->tail;
+				line->start = line->child->start;
 			}
 
 			token_free(t);
