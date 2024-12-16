@@ -1884,9 +1884,14 @@ void is_list_loose(token * list) {
 
 				while (walker->next != NULL) {
 					if (walker->type == BLOCK_EMPTY) {
-						if (walker->next->type == BLOCK_PARA) {
-							loose = true;
-						}
+                        // TODO: This switch statement is probably not all-inclusive
+                        switch (walker->next->type) {
+                            case BLOCK_PARA:
+                            case BLOCK_TABLE:
+                                loose = true;
+                            default:
+                                break;
+                        }
 					}
 
 					walker = walker->next;
@@ -2829,6 +2834,22 @@ void mmd_engine_update_metavalue_for_key(mmd_engine * e, const char * key, const
 
 	d_string_free(temp, true);
 	free(clean);
+}
+
+
+/// Convert MMD text to AST, with specified extensions, and language
+/// Returned token tree must be freed
+token * mmd_string_parse(const char * source, unsigned long extensions) {
+	mmd_engine * e = mmd_engine_create_with_string(source, extensions);
+
+	mmd_engine_parse_string(e);
+
+	token * result = mmd_engine_root(e);
+	e->root = NULL;
+
+	mmd_engine_free(e, true);
+
+	return result;
 }
 
 
